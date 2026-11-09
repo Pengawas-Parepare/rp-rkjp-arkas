@@ -2129,6 +2129,52 @@ function arkasSync(sc, opts){
   st.changed=!!(st.added||st.updated||st.removed||moved);
   return st;
 }
+var ARKAS_RULES=[
+  {re:/pelatihan|workshop|bimtek|diklat|kompetensi|pengembangan diri|pendampingan|lokakarya|in house|kurikulum/, benahi:'Peningkatan kompetensi guru dalam pembelajaran', impl:'Pelatihan dan pendampingan guru secara berkala di sekolah', kegiatan:'Peningkatan kompetensi guru', item:'Honor narasumber dan fasilitator pelatihan', bulan:'Juli', vol:2, sat:'orang', harga:750000},
+  {re:/buku|literasi|baca|perpustakaan|teks/, benahi:'Penguatan budaya literasi peserta didik', impl:'Pengadaan buku bacaan dan penguatan pojok baca kelas', kegiatan:'Penguatan literasi dan perpustakaan', item:'Pengadaan buku bacaan pengayaan', bulan:'Agustus', vol:50, sat:'buku', harga:75000},
+  {re:/numerasi|matematika|alat peraga|bilangan|geometri|data dan ketidakpastian/, benahi:'Penguatan pembelajaran numerasi', impl:'Penggunaan alat peraga dan bahan ajar kontekstual numerasi', kegiatan:'Penguatan numerasi', item:'Pengadaan alat peraga numerasi', bulan:'Agustus', vol:10, sat:'set', harga:250000},
+  {re:/komunitas belajar|diskusi|refleksi|kkg|gugus|supervisi|lesson study|berbagi praktik/, benahi:'Penguatan komunitas belajar guru', impl:'Pertemuan komunitas belajar dan refleksi praktik mengajar setiap bulan', kegiatan:'Komunitas belajar guru', item:'Konsumsi dan bahan kegiatan komunitas belajar', bulan:'September', vol:20, sat:'paket', harga:25000},
+  {re:/asesmen|evaluasi|instrumen|ujian|penilaian/, benahi:'Peningkatan kualitas asesmen pembelajaran', impl:'Penyusunan dan penggunaan instrumen asesmen formatif', kegiatan:'Penguatan asesmen pembelajaran', item:'Penggandaan instrumen asesmen', bulan:'Oktober', vol:100, sat:'eksemplar', harga:5000},
+  {re:/tik|komputer|digital|teknologi|aplikasi|internet|jaringan|daring/, benahi:'Pemanfaatan teknologi dalam pembelajaran dan pengelolaan', impl:'Penyediaan akses internet dan perangkat pendukung', kegiatan:'Pemanfaatan TIK', item:'Langganan internet dan perangkat pendukung', bulan:'Januari', vol:12, sat:'bulan', harga:350000},
+  {re:/karakter|profil pelajar|projek|kebinekaan|toleransi|inklusi|kesetaraan|gender|perundungan|kekerasan|keamanan|aman|iklim/, benahi:'Penguatan karakter dan iklim satuan pendidikan yang aman', impl:'Kegiatan penguatan karakter dan sosialisasi iklim sekolah aman', kegiatan:'Penguatan karakter dan iklim sekolah', item:'Bahan dan perlengkapan kegiatan penguatan karakter', bulan:'Februari', vol:1, sat:'paket', harga:1500000},
+  {re:/sarana|prasarana|perawatan|perbaikan|sanitasi|fasilitas/, benahi:'Pemeliharaan sarana dan prasarana', impl:'Perawatan dan perbaikan sarana pendukung pembelajaran', kegiatan:'Pemeliharaan sarana prasarana', item:'Pemeliharaan sarana dan prasarana pendukung', bulan:'Maret', vol:1, sat:'paket', harga:2000000},
+  {re:/orang tua|komite|masyarakat|partisipasi|sosialisasi|pertemuan|kemitraan/, benahi:'Peningkatan partisipasi orang tua dan masyarakat', impl:'Pertemuan dan sosialisasi program sekolah dengan orang tua', kegiatan:'Partisipasi orang tua dan masyarakat', item:'Konsumsi dan cetak bahan sosialisasi', bulan:'Mei', vol:30, sat:'paket', harga:20000},
+  {re:/kepemimpinan|manajemen|perencanaan|rapat|penganggaran|visi|program dan kebijakan/, benahi:'Penguatan perencanaan dan manajemen sekolah', impl:'Rapat dan penyusunan program berbasis data rapor pendidikan', kegiatan:'Penguatan perencanaan sekolah', item:'ATK dan konsumsi rapat penyusunan program', bulan:'Januari', vol:1, sat:'paket', harga:1000000}
+];
+var ARKAS_DEFAULT={benahi:'Peningkatan mutu pembelajaran', impl:'Pelaksanaan kegiatan pendukung pembelajaran', kegiatan:'Peningkatan mutu pembelajaran', item:'Belanja pendukung pelaksanaan kegiatan', bulan:'Juli', vol:1, sat:'paket', harga:1000000};
+function arkasShort(s,n){ s=String(s||'').replace(/^Contoh:\s*/,'').replace(/\s+/g,' ').trim(); if(s.length<=n) return s; var c=s.slice(0,n), p=c.lastIndexOf(' '); return c.slice(0,p>20?p:n)+'\u2026'; }
+function arkasPickRule(r,i){
+  var t=((r.kegiatan||'')+' '+(r.benahi||'')+' '+(r.implementasi||'')).toLowerCase();
+  if(!t.trim()) return ARKAS_RULES[i%ARKAS_RULES.length];
+  for(var k=0;k<ARKAS_RULES.length;k++) if(ARKAS_RULES[k].re.test(t)) return ARKAS_RULES[k];
+  return ARKAS_DEFAULT;
+}
+/* Isi contoh mengikuti isi baris: jenis belanja, bulan, jumlah, satuan, dan harga dipilih dari kegiatan ARKAS / kegiatan benahi / implementasi baris itu. */
+function arkasContoh(sc){
+  if(!sc.rkas) sc.rkas=[];
+  if(!sc.rkas.length) addRkasRow(sc,{sumberDana:'',volume:'',satuan:''});
+  var n=0;
+  function emp(v){ return v===undefined||v===null||v===''||v===0; }
+  sc.rkas.forEach(function(r,i){
+    var ru=arkasPickRule(r,i), act=r.kegiatan||r.benahi||r.implementasi||ru.kegiatan;
+    var base={benahi:'Contoh: '+ru.benahi,implementasi:'Contoh: '+ru.impl,kegiatan:'Contoh: '+ru.kegiatan,uraian:'Contoh: '+ru.item+' \u2014 '+arkasShort(act,70),bulan:ru.bulan,volume:ru.vol,satuan:ru.sat,hargaSatuan:ru.harga};
+    r._ex=r._ex||{};
+    Object.keys(base).forEach(function(k){ if(emp(r[k])){ r._ex[k]={from:(r[k]===undefined?'':r[k]),to:base[k]}; r[k]=base[k]; n++; } });
+    if(r._ex.bulan) r.triwulan=String(Math.floor(BULAN_ID.indexOf(base.bulan)/3)+1);
+    if(!Object.keys(r._ex).length) delete r._ex;
+  });
+  return n;
+}
+function arkasHapusContoh(sc){
+  var n=0;
+  (sc.rkas||[]).forEach(function(r){
+    if(!r._ex) return;
+    Object.keys(r._ex).forEach(function(k){ var e=r._ex[k]; if(r[k]===e.to){ r[k]=e.from; n++; } });
+    if(r._ex.bulan&&!r.bulan) r.triwulan=null;
+    delete r._ex;
+  });
+  return n;
+}
 function arkasSyncMsg(st){
   var p=[];
   if(st.added) p.push(st.added+' baris ditambahkan');
@@ -2198,6 +2244,8 @@ function renderRkas(){
   }
   bar.appendChild(el('button',{class:'btn secondary',title:'Samakan tabel ARKAS dengan RKJP. Baris yang pernah Anda hapus akan ditambahkan kembali jika masih ada di RKJP (bukan "Tidak").',onclick:function(){ var st1=arkasSync(sc,{reset:true}); save(); state.rkasSyncMsg=arkasSyncMsg(st1); render(); }},['Sinkronkan dengan RKJP']));
   bar.appendChild(el('button',{class:'btn secondary',onclick:function(){ addRkasRow(sc,{sumberDana:'',volume:'',satuan:''}); save(); render(); }},['+ Tambah baris']));
+  bar.appendChild(el('button',{class:'btn secondary',title:'Mengisi semua sel yang masih kosong dengan data contoh. Sel yang sudah Anda isi tidak diubah.',onclick:function(){ var n=arkasContoh(sc); save(); state.rkasSyncMsg=n+' sel kosong diisi contoh. Ganti dengan data sekolah Anda, atau klik Hapus isian contoh.'; render(); }},['Isi sel kosong (contoh)']));
+  if(sc.rkas.some(function(r){ return r._ex; })) bar.appendChild(el('button',{class:'btn ghost',title:'Mengosongkan kembali sel yang diisi contoh dan belum Anda ubah.',onclick:function(){ var n=arkasHapusContoh(sc); save(); state.rkasSyncMsg=n+' isian contoh dihapus.'; render(); }},['Hapus isian contoh']));
   bar.appendChild(el('button',{class:'btn ghost',onclick:function(){ window.print(); }},['Cetak tabel ARKAS']));
   panel.appendChild(bar);
   if(state.rkasSyncMsg){ panel.appendChild(el('div',{class:'no-print',style:'font-size:13px;color:var(--berdaya);margin:-4px 0 12px'},[state.rkasSyncMsg])); state.rkasSyncMsg=null; }

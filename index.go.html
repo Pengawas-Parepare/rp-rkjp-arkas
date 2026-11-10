@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Meja Konversi &mdash; Word, Foto, Excel ke PDF</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+<style>
+  :root{
+    --paper: #E9E4D6;
+    --paper-dark: #DDD5C0;
+    --paper-line: #C9BFA6;
+    --ink: #1E2A38;
+    --ink-soft: #4C5A6C;
+    --ink-faint: #7B8598;
+    --accent: #B9862F;
+    --accent-dark: #93691F;
+    --stamp: #A23B2E;
+    --sage: #52704F;
+    --white-card: #F6F3EA;
+    --radius: 3px;
+  }
+
+  *{ box-sizing: border-box; }
+
+  body{
+    margin:0;
+    background: var(--paper);
+    background-image:
+      linear-gradient(var(--paper-line) 1px, transparent 1px);
+    background-size: 100% 42px;
+    color: var(--ink);
+    font-family: 'IBM Plex Sans', sans-serif;
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  .wrap{
+    max-width: 980px;
+    margin: 0 auto;
+    padding: 56px 28px 80px;
+  }
+
+  /* ---------- Header ---------- */
+  header{
+    display:flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 22px;
+    margin-bottom: 38px;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .eyebrow{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent-dark);
+    font-weight: 600;
+    margin: 0 0 8px;
+  }
+  h1{
+    font-family:'Fraunces', serif;
+    font-weight: 700;
+    font-size: clamp(32px, 5vw, 46px);
+    margin: 0;
+    line-height: 1.05;
+    letter-spacing: -0.01em;
+  }
+  h1 em{
+    font-style: italic;
+    font-weight: 400;
+    color: var(--accent-dark);
+  }
+  .tagline{
+    max-width: 320px;
+    font-size: 13.5px;
+    color: var(--ink-soft);
+    line-height: 1.55;
+    text-align: right;
+  }
+  .privacy-note{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    margin-top:8px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--sage);
+  }
+  .privacy-note .dot{
+    width:6px; height:6px; border-radius:50%;
+    background: var(--sage);
+    display:inline-block;
+  }
+
+  /* ---------- Steps eyebrow row ---------- */
+  .steps{
+    display:flex;
+    gap: 28px;
+    margin-bottom: 30px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--ink-faint);
+    letter-spacing: 0.04em;
+  }
+  .steps span b{ color: var(--ink); font-weight:600; }
+  .steps .sep{ color: var(--paper-line); }
+
+  /* ---------- Layout grid ---------- */
+  .grid{
+    display:grid;
+    grid-template-columns: 1.1fr 1fr;
+    gap: 26px;
+  }
+  @media (max-width: 760px){
+    .grid{ grid-template-columns: 1fr; }
+    .tagline{ text-align:left; max-width:none; }
+    header{ flex-direction:column; align-items:flex-start; }
+  }
+
+  /* ---------- Drop zone ---------- */
+  .dropzone{
+    background: var(--white-card);
+    border: 2px dashed var(--ink-faint);
+    border-radius: var(--radius);
+    padding: 40px 24px;
+    text-align:center;
+    cursor: pointer;
+    transition: border-color .15s ease, background .15s ease, transform .15s ease;
+    position: relative;
+  }
+  .dropzone:hover, .dropzone.dragover{
+    border-color: var(--accent-dark);
+    background: #FBF8F0;
+  }
+  .dropzone.dragover{ transform: scale(0.995); }
+  .dz-icon{
+    width: 46px; height: 46px;
+    margin: 0 auto 16px;
+    border: 1.5px solid var(--ink);
+    border-radius: 2px;
+    position: relative;
+  }
+  .dz-icon::before{
+    content:'';
+    position:absolute;
+    left:50%; top:8px;
+    width:1px; height:18px;
+    background: var(--ink);
+    transform: translateX(-50%);
+  }
+  .dz-icon::after{
+    content:'';
+    position:absolute;
+    left:50%; top:8px;
+    width:9px; height:9px;
+    border-top: 1.5px solid var(--ink);
+    border-right: 1.5px solid var(--ink);
+    transform: translateX(-50%) rotate(-45deg);
+  }
+  .dz-title{
+    font-family:'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 600;
+    margin: 0 0 6px;
+  }
+  .dz-sub{
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    margin: 0 0 18px;
+  }
+  .dz-types{
+    display:flex;
+    justify-content:center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .tag{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    padding: 3px 8px;
+    border: 1px solid var(--paper-line);
+    border-radius: 20px;
+    color: var(--ink-soft);
+    background: var(--paper);
+  }
+  #fileInput{ display:none; }
+
+  /* ---------- Queue panel ---------- */
+  .queue-panel{
+    background: var(--white-card);
+    border: 1px solid var(--paper-line);
+    border-radius: var(--radius);
+    display:flex;
+    flex-direction:column;
+    min-height: 260px;
+  }
+  .queue-head{
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--paper-line);
+  }
+  .queue-head h2{
+    font-family:'Fraunces', serif;
+    font-size: 15px;
+    font-weight: 600;
+    margin:0;
+  }
+  .count-chip{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11px;
+    background: var(--ink);
+    color: var(--paper);
+    padding: 2px 8px;
+    border-radius: 20px;
+  }
+  .queue-list{
+    flex:1;
+    padding: 10px 12px;
+    display:flex;
+    flex-direction: column;
+    gap: 8px;
+    overflow-y:auto;
+    max-height: 340px;
+  }
+  .empty-msg{
+    margin: auto;
+    text-align:center;
+    color: var(--ink-faint);
+    font-size: 12.5px;
+    padding: 30px 10px;
+    font-family:'IBM Plex Mono', monospace;
+  }
+  .file-card{
+    display:flex;
+    flex-direction: column;
+    gap: 7px;
+    background: var(--paper);
+    border: 1px solid var(--paper-line);
+    border-radius: 2px;
+    padding: 9px 10px;
+    animation: slideIn .25s ease;
+  }
+  .file-card-top{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+  }
+  .file-note-input{
+    width: 100%;
+    font-family:'IBM Plex Sans', sans-serif;
+    font-size: 11.5px;
+    color: var(--ink);
+    background: var(--white-card);
+    border: 1px solid var(--paper-line);
+    border-radius: 2px;
+    padding: 6px 8px;
+    outline: none;
+  }
+  .file-note-input::placeholder{
+    color: var(--ink-faint);
+    font-style: italic;
+  }
+  .file-note-input:focus{
+    border-color: var(--accent-dark);
+  }
+  @keyframes slideIn{
+    from{ opacity:0; transform: translateY(-4px); }
+    to{ opacity:1; transform: translateY(0); }
+  }
+  .file-type-badge{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 9.5px;
+    font-weight: 600;
+    letter-spacing: .03em;
+    padding: 3px 6px;
+    border-radius: 2px;
+    color: #fff;
+    flex-shrink:0;
+    text-transform: uppercase;
+  }
+  .badge-docx{ background: #2C4E7C; }
+  .badge-excel{ background: var(--sage); }
+  .badge-image{ background: var(--accent-dark); }
+  .badge-error{ background: var(--stamp); }
+
+  .file-meta{ flex:1; min-width:0; }
+  .file-name{
+    font-size: 12.5px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow:hidden;
+    text-overflow: ellipsis;
+  }
+  .file-size{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--ink-faint);
+  }
+  .file-remove{
+    background:none;
+    border:none;
+    color: var(--ink-faint);
+    cursor:pointer;
+    font-size: 15px;
+    line-height:1;
+    padding: 4px 6px;
+    flex-shrink:0;
+  }
+  .file-remove:hover{ color: var(--stamp); }
+
+  .file-view-btn{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    font-weight: 600;
+    color: var(--accent-dark);
+    background: transparent;
+    border: 1px solid var(--accent-dark);
+    border-radius: 20px;
+    padding: 4px 10px;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background .15s ease, color .15s ease;
+  }
+  .file-view-btn:hover{
+    background: var(--accent-dark);
+    color: #fff;
+  }
+
+  /* ---------- Preview modal ---------- */
+  .preview-modal{
+    display:none;
+    position: fixed;
+    inset: 0;
+    background: rgba(30,42,56,0.55);
+    align-items:center;
+    justify-content:center;
+    padding: 24px;
+    z-index: 100;
+  }
+  .preview-modal.show{ display:flex; }
+  .preview-modal-inner{
+    background: var(--white-card);
+    border-radius: var(--radius);
+    width: min(720px, 100%);
+    max-height: 85vh;
+    display:flex;
+    flex-direction: column;
+    overflow:hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.3);
+  }
+  .preview-modal-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--paper-line);
+    flex-shrink:0;
+  }
+  .preview-modal-title{
+    font-family:'Fraunces', serif;
+    font-weight: 600;
+    font-size: 14.5px;
+    overflow:hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .preview-close{
+    background:none;
+    border:none;
+    font-size: 20px;
+    line-height:1;
+    color: var(--ink-soft);
+    cursor:pointer;
+    padding: 2px 6px;
+    flex-shrink:0;
+  }
+  .preview-close:hover{ color: var(--stamp); }
+  .preview-modal-body{
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .preview-loading{
+    text-align:center;
+    color: var(--ink-faint);
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    padding: 30px 0;
+    margin:0;
+  }
+  .preview-modal-body img{
+    max-width: 100%;
+    display:block;
+    margin: 0 auto;
+    border-radius: 2px;
+  }
+  .preview-doc{
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+    color: #222;
+    line-height: 1.55;
+  }
+  .preview-doc table{
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 12px;
+  }
+  .preview-doc td, .preview-doc th{
+    border: 1px solid #999;
+    padding: 4px 6px;
+  }
+  .preview-doc img{ max-width:100%; }
+
+  /* ---------- Footer action bar ---------- */
+  .action-bar{
+    margin-top: 26px;
+    background: var(--white-card);
+    border: 1px solid var(--paper-line);
+    border-radius: var(--radius);
+    padding: 18px 22px;
+    display:flex;
+    justify-content: space-between;
+    align-items:center;
+    gap: 20px;
+    flex-wrap: wrap;
+    position: relative;
+  }
+  .switch-row{
+    display:flex;
+    align-items:center;
+    gap: 10px;
+  }
+  .switch{
+    width: 38px; height: 21px;
+    background: var(--paper-line);
+    border-radius: 20px;
+    position: relative;
+    cursor:pointer;
+    transition: background .15s ease;
+    flex-shrink:0;
+  }
+  .switch.on{ background: var(--sage); }
+  .switch::after{
+    content:'';
+    position:absolute;
+    top:2px; left:2px;
+    width:17px; height:17px;
+    background:#fff;
+    border-radius:50%;
+    transition: transform .15s ease;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+  }
+  .switch.on::after{ transform: translateX(17px); }
+  .switch-label{
+    font-size: 12.5px;
+    color: var(--ink-soft);
+    max-width: 220px;
+    line-height:1.4;
+  }
+  .switch-label b{ color: var(--ink); }
+
+  .btn-primary{
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 12.5px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    padding: 13px 26px;
+    border-radius: 2px;
+    cursor: pointer;
+    transition: background .15s ease, transform .1s ease;
+    white-space: nowrap;
+  }
+  .btn-primary:hover:not(:disabled){ background: var(--accent-dark); }
+  .btn-primary:active:not(:disabled){ transform: scale(0.98); }
+  .btn-primary:disabled{
+    background: var(--paper-line);
+    color: var(--ink-faint);
+    cursor: not-allowed;
+  }
+
+  /* progress */
+  .progress-wrap{
+    display:none;
+    align-items:center;
+    gap: 10px;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--ink-soft);
+  }
+  .progress-wrap.show{ display:flex; }
+  .progress-track{
+    width: 120px;
+    height: 5px;
+    background: var(--paper-line);
+    border-radius: 4px;
+    overflow:hidden;
+  }
+  .progress-fill{
+    height:100%;
+    width:0%;
+    background: var(--accent);
+    transition: width .2s ease;
+  }
+
+  /* stamp */
+  .stamp{
+    position:absolute;
+    right: 22px;
+    top: -34px;
+    width: 92px; height: 92px;
+    border: 3px solid var(--stamp);
+    border-radius: 50%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color: var(--stamp);
+    font-family:'IBM Plex Mono', monospace;
+    font-weight:700;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    transform: rotate(-14deg) scale(0);
+    opacity:0;
+    background: rgba(246,243,234,0.9);
+    pointer-events:none;
+  }
+  .stamp.show{
+    animation: stampIn .45s cubic-bezier(.3,1.6,.5,1) forwards;
+  }
+  @keyframes stampIn{
+    0%{ transform: rotate(-14deg) scale(0); opacity:0; }
+    60%{ transform: rotate(-14deg) scale(1.15); opacity:1; }
+    100%{ transform: rotate(-14deg) scale(1); opacity:1; }
+  }
+  .stamp::before{
+    content:'';
+    position:absolute;
+    inset: 6px;
+    border: 1px solid var(--stamp);
+    border-radius: 50%;
+  }
+
+  /* hidden render sandbox */
+  #renderSandbox{
+    position: fixed;
+    left: -9999px;
+    top: 0;
+    background:#fff;
+  }
+  .render-title{
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    font-weight:700;
+    color:#1E2A38;
+    margin: 0 0 4px;
+    padding-bottom: 8px;
+    border-bottom: 1.5px solid #1E2A38;
+  }
+  .render-note{
+    font-family: Arial, sans-serif;
+    font-size: 11px;
+    font-style: italic;
+    color:#555;
+    margin: 0 0 10px;
+  }
+  .render-body{
+    font-family: Arial, sans-serif;
+    font-size: 12px;
+    color:#222;
+    line-height:1.5;
+  }
+  .render-body table{
+    border-collapse: collapse;
+    width: 100%;
+    font-size: 11px;
+  }
+  .render-body td, .render-body th{
+    border: 1px solid #999;
+    padding: 4px 6px;
+  }
+  .render-body img{ max-width:100%; }
+
+  /* ---------- Review / caption panel (below download button) ---------- */
+  .review-panel{
+    margin-top: 18px;
+    background: var(--white-card);
+    border: 1px solid var(--paper-line);
+    border-radius: var(--radius);
+    padding: 18px 22px 20px;
+  }
+  .review-head h2{
+    font-family:'Fraunces', serif;
+    font-size: 15px;
+    font-weight: 600;
+    margin: 0 0 4px;
+  }
+  .review-head p{
+    font-size: 12px;
+    color: var(--ink-soft);
+    margin: 0 0 14px;
+  }
+  .review-list{
+    display:flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .review-item{
+    display:flex;
+    align-items:center;
+    gap: 12px;
+    background: var(--paper);
+    border: 1px solid var(--paper-line);
+    border-radius: 2px;
+    padding: 9px 12px;
+  }
+  .review-item .file-type-badge{ flex-shrink:0; }
+  .review-item-name{
+    font-size: 12.5px;
+    font-weight: 500;
+    flex-shrink:0;
+    max-width: 200px;
+    white-space: nowrap;
+    overflow:hidden;
+    text-overflow: ellipsis;
+  }
+  .review-item .file-note-input{
+    flex:1;
+  }
+  @media (max-width: 600px){
+    .review-item{ flex-wrap: wrap; }
+    .review-item-name{ max-width: none; }
+    .review-item .file-note-input{ width:100%; }
+  }
+
+  footer{
+    margin-top: 40px;
+    text-align:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--ink-faint);
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header>
+    <div>
+      <p class="eyebrow">Portal Konversi Berkas</p>
+      <h1>Meja Konversi <em>PDF</em></h1>
+      <div class="privacy-note"><span class="dot"></span> Diproses langsung di peramban Anda &mdash; berkas tidak diunggah ke server</div>
+    </div>
+    <p class="tagline">Gabungkan Word, foto, dan Excel dari berbagai format menjadi satu berkas PDF yang rapi, siap cetak atau kirim.</p>
+  </header>
+
+  <div class="steps">
+    <span><b>01</b> &nbsp;Unggah berkas</span>
+    <span class="sep">&mdash;</span>
+    <span><b>02</b> &nbsp;Atur urutan</span>
+    <span class="sep">&mdash;</span>
+    <span><b>03</b> &nbsp;Unduh PDF</span>
+  </div>
+
+  <div class="grid">
+    <div class="dropzone" id="dropzone">
+      <div class="dz-icon"></div>
+      <p class="dz-title">Seret berkas ke sini</p>
+      <p class="dz-sub">atau klik untuk memilih dari perangkat</p>
+      <div class="dz-types">
+        <span class="tag">.DOCX</span>
+        <span class="tag">.XLSX / .XLS / .CSV</span>
+        <span class="tag">.JPG / .PNG / .WEBP</span>
+      </div>
+      <input type="file" id="fileInput" multiple accept=".docx,.xlsx,.xls,.csv,.jpg,.jpeg,.png,.webp,.gif,.bmp">
+    </div>
+
+    <div class="queue-panel">
+      <div class="queue-head">
+        <h2>Antrean Berkas</h2>
+        <span class="count-chip" id="countChip">0</span>
+      </div>
+      <div class="queue-list" id="queueList">
+        <p class="empty-msg">Belum ada berkas.<br>Tambahkan Word, foto, atau Excel di sebelah kiri.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="action-bar">
+    <div class="stamp" id="stamp">SELESAI</div>
+    <div class="switch-row">
+      <div class="switch on" id="mergeSwitch"></div>
+      <div class="switch-label"><b>Gabung jadi satu PDF.</b> Matikan untuk mengunduh setiap berkas sebagai PDF terpisah (dalam satu .zip).</div>
+    </div>
+    <div style="display:flex; align-items:center; gap:16px;">
+      <div class="progress-wrap" id="progressWrap">
+        <span id="progressLabel">Memproses&hellip;</span>
+        <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+      </div>
+      <button class="btn-primary" id="convertBtn" disabled>Unduh PDF</button>
+    </div>
+  </div>
+
+  <div class="review-panel" id="reviewPanel">
+    <div class="review-head">
+      <h2>Keterangan Berkas</h2>
+      <p>Beri keterangan singkat untuk tiap berkas &mdash; akan ikut tercetak di PDF hasil konversi.</p>
+    </div>
+    <div class="review-list" id="reviewList">
+      <p class="empty-msg">Belum ada berkas untuk diberi keterangan.</p>
+    </div>
+  </div>
+
+  <footer>MEJA KONVERSI &middot; berjalan sepenuhnya di sisi klien &middot; tidak ada data yang tersimpan</footer>
+
+</div>
+
+<div id="renderSandbox"></div>
+
+<div class="preview-modal" id="previewModal">
+  <div class="preview-modal-inner">
+    <div class="preview-modal-head">
+      <span class="preview-modal-title" id="previewTitle">Pratinjau</span>
+      <button class="preview-close" id="previewClose" title="Tutup">&times;</button>
+    </div>
+    <div class="preview-modal-body" id="previewContent"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const { jsPDF } = window.jspdf;
+
+  const dropzone = document.getElementById('dropzone');
+  const fileInput = document.getElementById('fileInput');
+  const queueList = document.getElementById('queueList');
+  const reviewList = document.getElementById('reviewList');
+  const previewModal = document.getElementById('previewModal');
+  const previewTitle = document.getElementById('previewTitle');
+  const previewContent = document.getElementById('previewContent');
+  const previewClose = document.getElementById('previewClose');
+  const countChip = document.getElementById('countChip');
+  const convertBtn = document.getElementById('convertBtn');
+  const mergeSwitch = document.getElementById('mergeSwitch');
+  const progressWrap = document.getElementById('progressWrap');
+  const progressFill = document.getElementById('progressFill');
+  const progressLabel = document.getElementById('progressLabel');
+  const stamp = document.getElementById('stamp');
+  const sandbox = document.getElementById('renderSandbox');
+
+  let mergeMode = true;
+  let files = []; // {id, file, kind, name, size, error}
+  let idCounter = 0;
+
+  function escapeHtml(str){
+    return String(str)
+      .replace(/&/g,'&amp;')
+      .replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;')
+      .replace(/"/g,'&quot;');
+  }
+
+  function fmtSize(bytes){
+    if(bytes < 1024) return bytes + ' B';
+    if(bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+    return (bytes/(1024*1024)).toFixed(1) + ' MB';
+  }
+
+  function detectKind(file){
+    const ext = file.name.split('.').pop().toLowerCase();
+    if(['docx'].includes(ext)) return 'docx';
+    if(['doc'].includes(ext)) return 'doc-unsupported';
+    if(['xlsx','xls','csv'].includes(ext)) return 'excel';
+    if(['jpg','jpeg','png','webp','gif','bmp'].includes(ext)) return 'image';
+    return 'unknown';
+  }
+
+  function badgeLabel(kind){
+    if(kind==='docx') return 'WORD';
+    if(kind==='excel') return 'EXCEL';
+    if(kind==='image') return 'FOTO';
+    return 'ERROR';
+  }
+  function badgeClass(kind){
+    if(kind==='docx') return 'badge-docx';
+    if(kind==='excel') return 'badge-excel';
+    if(kind==='image') return 'badge-image';
+    return 'badge-error';
+  }
+
+  function renderQueue(){
+    countChip.textContent = files.length;
+    convertBtn.disabled = files.length === 0;
+    if(files.length === 0){
+      queueList.innerHTML = '<p class="empty-msg">Belum ada berkas.<br>Tambahkan Word, foto, atau Excel di sebelah kiri.</p>';
+      return;
+    }
+    queueList.innerHTML = '';
+    files.forEach(f => {
+      const card = document.createElement('div');
+      card.className = 'file-card';
+      const badge = f.error ? 'error' : f.kind;
+      card.innerHTML = `
+        <div class="file-card-top">
+          <span class="file-type-badge ${badgeClass(badge)}">${f.error ? 'GAGAL' : badgeLabel(f.kind)}</span>
+          <div class="file-meta">
+            <div class="file-name" title="${f.name}">${f.name}</div>
+            <div class="file-size">${f.error ? f.error : fmtSize(f.size)}</div>
+          </div>
+          ${f.error ? '' : `<button class="file-view-btn" data-id="${f.id}" title="Lihat berkas">Lihat</button>`}
+          <button class="file-remove" data-id="${f.id}" title="Hapus">&times;</button>
+        </div>
+      `;
+      queueList.appendChild(card);
+    });
+    queueList.querySelectorAll('.file-remove').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        const id = Number(e.currentTarget.getAttribute('data-id'));
+        files = files.filter(f=>f.id !== id);
+        stamp.classList.remove('show');
+        renderQueue();
+        renderReviewList();
+      });
+    });
+    queueList.querySelectorAll('.file-view-btn').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        const id = Number(e.currentTarget.getAttribute('data-id'));
+        const entry = files.find(f=>f.id === id);
+        if(entry) openPreview(entry);
+      });
+    });
+  }
+
+  function renderReviewList(){
+    const validFiles = files.filter(f => !f.error);
+    if(validFiles.length === 0){
+      reviewList.innerHTML = '<p class="empty-msg">Belum ada berkas untuk diberi keterangan.</p>';
+      return;
+    }
+    reviewList.innerHTML = '';
+    validFiles.forEach(f => {
+      const item = document.createElement('div');
+      item.className = 'review-item';
+      item.innerHTML = `
+        <span class="file-type-badge ${badgeClass(f.kind)}">${badgeLabel(f.kind)}</span>
+        <span class="review-item-name" title="${f.name}">${f.name}</span>
+        <button class="file-view-btn" data-id="${f.id}" title="Lihat berkas">Lihat</button>
+        <input type="text" class="file-note-input" data-id="${f.id}" placeholder="Tambahkan keterangan (opsional)&hellip;" value="${escapeHtml(f.note || '')}">
+      `;
+      reviewList.appendChild(item);
+    });
+    reviewList.querySelectorAll('.file-note-input').forEach(inp=>{
+      inp.addEventListener('input', (e)=>{
+        const id = Number(e.currentTarget.getAttribute('data-id'));
+        const entry = files.find(f=>f.id === id);
+        if(entry) entry.note = e.currentTarget.value;
+      });
+    });
+    reviewList.querySelectorAll('.file-view-btn').forEach(btn=>{
+      btn.addEventListener('click', (e)=>{
+        const id = Number(e.currentTarget.getAttribute('data-id'));
+        const entry = files.find(f=>f.id === id);
+        if(entry) openPreview(entry);
+      });
+    });
+  }
+
+  function addFiles(fileList){
+    Array.from(fileList).forEach(file=>{
+      const kind = detectKind(file);
+      const entry = { id: idCounter++, file, kind, name: file.name, size: file.size, error: null, note: '' };
+      if(kind === 'unknown') entry.error = 'Format tidak didukung';
+      if(kind === 'doc-unsupported') entry.error = 'Simpan ulang sebagai .docx terlebih dulu';
+      files.push(entry);
+    });
+    renderQueue();
+    renderReviewList();
+  }
+
+  dropzone.addEventListener('click', ()=> fileInput.click());
+  fileInput.addEventListener('change', (e)=>{ addFiles(e.target.files); fileInput.value = ''; });
+
+  ['dragenter','dragover'].forEach(evt=>{
+    dropzone.addEventListener(evt, (e)=>{ e.preventDefault(); dropzone.classList.add('dragover'); });
+  });
+  ['dragleave','drop'].forEach(evt=>{
+    dropzone.addEventListener(evt, (e)=>{ e.preventDefault(); dropzone.classList.remove('dragover'); });
+  });
+  dropzone.addEventListener('drop', (e)=>{
+    if(e.dataTransfer.files && e.dataTransfer.files.length){
+      addFiles(e.dataTransfer.files);
+    }
+  });
+
+  mergeSwitch.addEventListener('click', ()=>{
+    mergeMode = !mergeMode;
+    mergeSwitch.classList.toggle('on', mergeMode);
+  });
+
+  function readAsArrayBuffer(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=> resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(file);
+    });
+  }
+  function readAsDataURL(file){
+    return new Promise((resolve, reject)=>{
+      const reader = new FileReader();
+      reader.onload = ()=> resolve(reader.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+  function loadImage(src){
+    return new Promise((resolve, reject)=>{
+      const img = new Image();
+      img.onload = ()=> resolve(img);
+      img.onerror = reject;
+      img.src = src;
+    });
+  }
+
+  async function addImageToDoc(doc, file, isFirstOnDoc, note){
+    const dataUrl = await readAsDataURL(file);
+    const img = await loadImage(dataUrl);
+    if(!isFirstOnDoc) doc.addPage();
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 12;
+    const captionSpace = note ? 10 : 0;
+    const maxW = pageWidth - margin*2;
+    const maxH = pageHeight - margin*2 - captionSpace;
+    let w = img.width, h = img.height;
+    const scaledRatio = Math.min(maxW / w, maxH / h);
+    w = w * scaledRatio;
+    h = h * scaledRatio;
+    const x = (pageWidth - w) / 2;
+    const y = margin + (maxH - h) / 2;
+    let format = 'JPEG';
+    if(dataUrl.startsWith('data:image/png')) format = 'PNG';
+    doc.addImage(dataUrl, format, x, y, w, h);
+    if(note){
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(9);
+      doc.setTextColor(90, 90, 90);
+      doc.text(note, pageWidth / 2, y + h + 7, { align: 'center', maxWidth: maxW });
+      doc.setTextColor(0, 0, 0);
+      doc.setFont('helvetica', 'normal');
+    }
+  }
+
+  function excelToHtml(buffer){
+    const wb = XLSX.read(buffer, { type: 'array' });
+    let html = '';
+    wb.SheetNames.forEach(name=>{
+      const ws = wb.Sheets[name];
+      const sheetHtml = XLSX.utils.sheet_to_html(ws, { editable:false });
+      html += `<h4 style="font-family:Arial,sans-serif;margin:14px 0 6px;">${name}</h4>` + sheetHtml;
+    });
+    return html;
+  }
+
+  async function renderHtmlToDoc(doc, title, bodyHtml, isFirstOnDoc, note){
+    if(!isFirstOnDoc) doc.addPage();
+    const container = document.createElement('div');
+    container.style.width = '760px';
+    container.style.padding = '0';
+    const noteHtml = note ? `<div class="render-note">${escapeHtml(note)}</div>` : '';
+    container.innerHTML = `<div class="render-title">${title}</div>${noteHtml}<div class="render-body">${bodyHtml}</div>`;
+    sandbox.appendChild(container);
+    await new Promise((resolve)=>{
+      doc.html(container, {
+        x: 10,
+        y: 10,
+        width: 190,
+        windowWidth: 760,
+        html2canvas: { scale: 0.25, useCORS: true },
+        callback: function(){
+          sandbox.removeChild(container);
+          resolve();
+        }
+      });
+    });
+  }
+
+  async function buildPdfForFile(entry){
+    const doc = new jsPDF({ unit:'mm', format:'a4' });
+    if(entry.kind === 'image'){
+      await addImageToDoc(doc, entry.file, true, entry.note);
+    } else if(entry.kind === 'docx'){
+      const buf = await readAsArrayBuffer(entry.file);
+      const result = await mammoth.convertToHtml({ arrayBuffer: buf });
+      await renderHtmlToDoc(doc, entry.name, result.value, true, entry.note);
+    } else if(entry.kind === 'excel'){
+      const buf = await readAsArrayBuffer(entry.file);
+      const html = excelToHtml(buf);
+      await renderHtmlToDoc(doc, entry.name, html, true, entry.note);
+    }
+    return doc;
+  }
+
+  async function convertAll(){
+    const validFiles = files.filter(f => !f.error);
+    if(validFiles.length === 0) return;
+
+    convertBtn.disabled = true;
+    progressWrap.classList.add('show');
+    stamp.classList.remove('show');
+
+    try{
+      if(mergeMode){
+        const doc = new jsPDF({ unit:'mm', format:'a4' });
+        for(let i=0; i<validFiles.length; i++){
+          const entry = validFiles[i];
+          progressLabel.textContent = `Memproses ${i+1}/${validFiles.length}`;
+          progressFill.style.width = `${Math.round(((i)/validFiles.length)*100)}%`;
+          const isFirst = i === 0;
+          if(entry.kind === 'image'){
+            await addImageToDoc(doc, entry.file, isFirst, entry.note);
+          } else if(entry.kind === 'docx'){
+            const buf = await readAsArrayBuffer(entry.file);
+            const result = await mammoth.convertToHtml({ arrayBuffer: buf });
+            await renderHtmlToDoc(doc, entry.name, result.value, isFirst, entry.note);
+          } else if(entry.kind === 'excel'){
+            const buf = await readAsArrayBuffer(entry.file);
+            const html = excelToHtml(buf);
+            await renderHtmlToDoc(doc, entry.name, html, isFirst, entry.note);
+          }
+        }
+        progressFill.style.width = '100%';
+        doc.save('gabungan.pdf');
+      } else {
+        const zip = new JSZip();
+        for(let i=0; i<validFiles.length; i++){
+          const entry = validFiles[i];
+          progressLabel.textContent = `Memproses ${i+1}/${validFiles.length}`;
+          progressFill.style.width = `${Math.round(((i)/validFiles.length)*100)}%`;
+          const doc = await buildPdfForFile(entry);
+          const blob = doc.output('blob');
+          const baseName = entry.name.replace(/\.[^/.]+$/, '');
+          zip.file(`${baseName}.pdf`, blob);
+        }
+        progressFill.style.width = '100%';
+        const zipBlob = await zip.generateAsync({ type: 'blob' });
+        const url = URL.createObjectURL(zipBlob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'berkas-pdf.zip';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+      stamp.classList.add('show');
+    } catch(err){
+      console.error(err);
+      alert('Terjadi kendala saat mengonversi salah satu berkas: ' + err.message);
+    } finally {
+      progressWrap.classList.remove('show');
+      convertBtn.disabled = files.length === 0;
+    }
+  }
+
+  async function openPreview(entry){
+    previewTitle.textContent = entry.name;
+    previewContent.innerHTML = '<p class="preview-loading">Memuat pratinjau&hellip;</p>';
+    previewModal.classList.add('show');
+    try{
+      if(entry.kind === 'image'){
+        const dataUrl = await readAsDataURL(entry.file);
+        previewContent.innerHTML = `<img src="${dataUrl}" alt="${escapeHtml(entry.name)}">`;
+      } else if(entry.kind === 'docx'){
+        const buf = await readAsArrayBuffer(entry.file);
+        const result = await mammoth.convertToHtml({ arrayBuffer: buf });
+        previewContent.innerHTML = `<div class="preview-doc">${result.value}</div>`;
+      } else if(entry.kind === 'excel'){
+        const buf = await readAsArrayBuffer(entry.file);
+        const html = excelToHtml(buf);
+        previewContent.innerHTML = `<div class="preview-doc">${html}</div>`;
+      } else {
+        previewContent.innerHTML = '<p class="preview-loading">Pratinjau tidak tersedia untuk berkas ini.</p>';
+      }
+    } catch(err){
+      console.error(err);
+      previewContent.innerHTML = '<p class="preview-loading">Gagal memuat pratinjau berkas ini.</p>';
+    }
+  }
+
+  function closePreview(){
+    previewModal.classList.remove('show');
+    previewContent.innerHTML = '';
+  }
+
+  previewClose.addEventListener('click', closePreview);
+  previewModal.addEventListener('click', (e)=>{
+    if(e.target === previewModal) closePreview();
+  });
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape') closePreview();
+  });
+
+  convertBtn.addEventListener('click', convertAll);
+
+  renderQueue();
+  renderReviewList();
+})();
+</script>
+
+</body>
+</html>
